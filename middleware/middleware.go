@@ -55,3 +55,15 @@ func New(opts Options) func(http.Handler) http.Handler {
 		return h
 	}
 }
+
+// Chain applies a slice of middleware functions to a handler in order,
+// so that the first middleware in the slice is the outermost wrapper.
+// This allows composing middleware independently of the Options struct.
+func Chain(middlewares ...func(http.Handler) http.Handler) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		for i := len(middlewares) - 1; i >= 0; i-- {
+			next = middlewares[i](next)
+		}
+		return next
+	}
+}
