@@ -35,6 +35,18 @@ func New(prefix string) *Logger {
 	}
 }
 
+// NewWithWriter creates a new Logger middleware that writes to the provided writer.
+// This is useful for testing or redirecting logs to a custom destination.
+func NewWithWriter(prefix string, w *os.File) *Logger {
+	if prefix == "" {
+		prefix = "[routeguard]"
+	}
+	return &Logger{
+		log:    log.New(w, prefix+" ", log.LstdFlags),
+		prefix: prefix,
+	}
+}
+
 // Middleware returns an HTTP handler that logs each request.
 func (l *Logger) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
