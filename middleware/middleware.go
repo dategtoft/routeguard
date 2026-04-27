@@ -1,73 +1,50 @@
-// Package middleware provides a unified interface for combining routeguard's
-// rate limiting and JWT validation into a single composable middleware chain.
 package middleware
 
 import (
 	"net/http"
 
 	"github.com/yourusername/routeguard/jwt"
+	"github.com/yourusername/routeguard/logger"
 	"github.com/yourusername/routeguard/ratelimit"
 )
 
-// Options holds configuration for the combined middleware.
+// Options holds optional middleware components.
 type Options struct {
-	// RateLimit configures the rate limiter. If nil, rate limiting is disabled.
-	RateLimit *ratelimit.Options
-	// JWT configures the JWT validator. If nil, JWT validation is disabled.
-	JWT *jwt.Options
+	RateLimiter *ratelimit.RateLimiter
+	JWT         *jwt.JWT
+	Logger      *logger.Logger
 }
 
-// RateLimitOptions is an alias for configuring rate limiting within middleware.
-type RateLimitOptions = ratelimit.Options
-
-// JWTOptions is an alias for configuring JWT validation within middleware.
-type JWTOptions = jwt.Options
-
-// Chain holds the composed middleware handlers.
+// Chain wraps a handler with the configured middleware stack.
 type Chain struct {
-	rl  *ratelimit.Limiter
-	jwt *jwt.Validator
+	opts Options
 }
 
-// New creates a new middleware Chain based on the provided Options.
-// Only non-nil option blocks will be activated.
+// New creates a new middleware Chain with the provided options.
 func New(opts Options) *Chain {
-	c := &Chain{}
-
-	if opts.RateLimit != nil {
-		c.rl = ratelimit.New(*opts.RateLimit)
-	}
-
-	if opts.JWT != nil {
-		c.jwt = jwt.New(*opts.JWT)
-	}
-
-	return c
+	return &Chain{opts: opts}
 }
 
-// Handler wraps the given http.Handler with all configured middleware.
-// Middleware is applied in the following order:
-//  1. Rate limiting (if configured)
-//  2. JWT validation (if configured)
-//
-// If a middleware rejects the request, subsequent middleware will not run.
+// Handler wraps the given http.Handler with all enabled middleware.
 func (c *Chain) Handler(next http.Handler) http.Handler {
-	h := next
+	handler := next
 
-	// Apply JWT middleware first in the wrap so it runs after rate limiting.
-	if c.jwt != nil {
-		h = c.jwt.Middleware(h)
+	if c.opts.RateLimiter != nil {
+		handler = c.opts.RateLimiter.Middleware(handler)
 	}
 
-	// Rate limiting is the outermost layer — checked before JWT validation.
-	if c.rl != nil {
-		h = c.rl.Middleware(h)
+	if c.opts.JWT != nil {
+		handler = c.opts.JWT.Middleware(handler)
 	}
 
-	return h
+	if c.opts.Logger != nil {
+		handler = c.opts.Logger.Middleware(handler)
+	}
+
+	return handler
 }
 
-// HandlerFunc wraps the given http.HandlerFunc with all configured middleware.
+// HandlerFunc wraps the given http.HandlerFunc with all enabled middleware.
 func (c *Chain) HandlerFunc(fn http.HandlerFunc) http.Handler {
 	return c.Handler(fn)
 }
