@@ -65,6 +65,17 @@ func TestParse_InvalidSecret(t *testing.T) {
 	}
 }
 
+func TestParse_MalformedToken(t *testing.T) {
+	v := New(testSecret)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer not.a.valid.jwt")
+
+	_, err := v.Parse(req)
+	if err == nil {
+		t.Fatal("expected error for malformed token")
+	}
+}
+
 func TestMiddleware_UnauthorizedRequest(t *testing.T) {
 	v := New(testSecret)
 	handler := v.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
