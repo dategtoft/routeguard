@@ -9,6 +9,8 @@ import (
 )
 
 // ExampleNew demonstrates using the CSRF middleware with default options.
+// A GET request is considered safe and will receive a CSRF token cookie
+// in the response without requiring one in the request.
 func ExampleNew() {
 	protected := csrf.New(csrf.DefaultOptions())(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -51,4 +53,23 @@ func ExampleNew_customOptions() {
 
 	// Output:
 	// 200
+}
+
+// ExampleNew_missingToken demonstrates that a POST request without a CSRF
+// token is rejected with 403 Forbidden.
+func ExampleNew_missingToken() {
+	protected := csrf.New(csrf.DefaultOptions())(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintln(w, "should not reach here")
+		}),
+	)
+
+	// POST request with no cookie or header — should be rejected.
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/submit", nil)
+	protected.ServeHTTP(rec, req)
+	fmt.Println(rec.Code)
+
+	// Output:
+	// 403
 }
