@@ -74,11 +74,19 @@ func (f *ipFilter) isDenied(ip net.IP) bool {
 	return false
 }
 
+// parseCIDRs parses a list of IP addresses or CIDR ranges into []*net.IPNet.
+// Plain IP addresses (without a prefix length) are treated as /32 for IPv4
+// or /128 for IPv6.
 func parseCIDRs(entries []string) []*net.IPNet {
 	var nets []*net.IPNet
 	for _, e := range entries {
 		if !strings.Contains(e, "/") {
-			e += "/32"
+			// Use /128 for IPv6 addresses, /32 for IPv4.
+			if strings.Contains(e, ":") {
+				e += "/128"
+			} else {
+				e += "/32"
+			}
 		}
 		_, n, err := net.ParseCIDR(e)
 		if err == nil {
