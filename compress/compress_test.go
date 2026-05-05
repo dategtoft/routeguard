@@ -93,3 +93,24 @@ func TestNew_ContentLengthRemoved(t *testing.T) {
 		t.Error("expected Content-Length to be removed when gzip is applied")
 	}
 }
+
+func TestNew_BelowMinLengthNotCompressed(t *testing.T) {
+	// Body shorter than MinLength (1024) should not be compressed even if
+	// the client advertises gzip support.
+	body := "short"
+	mw := compress.New(compress.DefaultOptions())
+	handler := mw(newTestHandler(body))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Header().Get("Content-Encoding") == "gzip" {
+		t.Error("expected no gzip encoding for body below MinLength")
+	}
+	if rec.Body.String() != body {
+		t.Errorf("expected plain body %q, got %q", body, rec.Body.String())
+	}
+}
