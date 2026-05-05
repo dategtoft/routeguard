@@ -24,6 +24,15 @@ func newOKHandler() http.Handler {
 	})
 }
 
+// newRecoveryHandler is a test helper that creates a recovery-wrapped handler
+// with a buffer-backed logger, returning both the handler and the log buffer.
+func newRecoveryHandler(next http.Handler, enableStack bool) (http.Handler, *bytes.Buffer) {
+	var buf bytes.Buffer
+	logger := log.New(&buf, "", 0)
+	opts := recovery.Options{Logger: logger, EnableStackTrace: enableStack}
+	return recovery.New(next, opts), &buf
+}
+
 func TestRecovery_NoPanic(t *testing.T) {
 	handler := recovery.New(newOKHandler(), recovery.DefaultOptions())
 	rec := httptest.NewRecorder()
@@ -37,11 +46,7 @@ func TestRecovery_NoPanic(t *testing.T) {
 }
 
 func TestRecovery_PanicReturns500(t *testing.T) {
-	var buf bytes.Buffer
-	logger := log.New(&buf, "", 0)
-	opts := recovery.Options{Logger: logger, EnableStackTrace: false}
-
-	handler := recovery.New(newPanicHandler(), opts)
+	handler, _ := newRecoveryHandler(newPanicHandler(), false)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 
@@ -53,11 +58,7 @@ func TestRecovery_PanicReturns500(t *testing.T) {
 }
 
 func TestRecovery_LogsPanicMessage(t *testing.T) {
-	var buf bytes.Buffer
-	logger := log.New(&buf, "", 0)
-	opts := recovery.Options{Logger: logger, EnableStackTrace: false}
-
-	handler := recovery.New(newPanicHandler(), opts)
+	handler, buf := newRecoveryHandler(newPanicHandler(), false)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 
@@ -69,11 +70,7 @@ func TestRecovery_LogsPanicMessage(t *testing.T) {
 }
 
 func TestRecovery_LogsStackTrace(t *testing.T) {
-	var buf bytes.Buffer
-	logger := log.New(&buf, "", 0)
-	opts := recovery.Options{Logger: logger, EnableStackTrace: true}
-
-	handler := recovery.New(newPanicHandler(), opts)
+	handler, buf := newRecoveryHandler(newPanicHandler(), true)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 
