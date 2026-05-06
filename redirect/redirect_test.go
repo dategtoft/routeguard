@@ -94,6 +94,21 @@ func TestTrailingSlash_Remove(t *testing.T) {
 	}
 }
 
+func TestTrailingSlash_AddAlreadyPresent(t *testing.T) {
+	opts := redirect.DefaultOptions()
+	opts.TrailingSlash = "add"
+	mw := redirect.New(opts)(newTestHandler())
+
+	// Path already has a trailing slash; no redirect should occur.
+	req := httptest.NewRequest(http.MethodGet, "/about/", nil)
+	rec := httptest.NewRecorder()
+	mw.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 (no redirect), got %d", rec.Code)
+	}
+}
+
 func TestNoRedirect_PassesThrough(t *testing.T) {
 	mw := redirect.New(redirect.DefaultOptions())(newTestHandler())
 
