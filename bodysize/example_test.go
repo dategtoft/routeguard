@@ -48,3 +48,26 @@ func ExampleNew_customLimit() {
 	fmt.Println(rec.Code)
 	// Output: 413
 }
+
+// ExampleNew_getRequestSkipped demonstrates that GET requests without a body
+// are passed through regardless of any configured limit.
+func ExampleNew_getRequestSkipped() {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	opts := bodysize.Options{
+		MaxBytes:     1, // extremely small limit
+		ErrorMessage: "body too large",
+	}
+	mw := bodysize.New(opts)
+	h := mw(handler)
+
+	// GET requests typically have no body, so the limit should not apply.
+	req := httptest.NewRequest(http.MethodGet, "/resource", http.NoBody)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	fmt.Println(rec.Code)
+	// Output: 200
+}
