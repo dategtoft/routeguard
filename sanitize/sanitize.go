@@ -60,6 +60,12 @@ func New(opts Options) func(http.Handler) http.Handler {
 	}
 }
 
+// NewDefault returns middleware using DefaultOptions. It is a convenience
+// wrapper around New(DefaultOptions()) for the common case.
+func NewDefault() func(http.Handler) http.Handler {
+	return New(DefaultOptions())
+}
+
 func sanitizeValues(vals url.Values, opts Options) url.Values {
 	out := make(url.Values, len(vals))
 	for key, slice := range vals {
